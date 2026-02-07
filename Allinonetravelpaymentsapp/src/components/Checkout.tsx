@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Shield, Info, Check, ExternalLink, Clock, Wallet, Plane } from 'lucide-react';
 import { motion } from 'motion/react';
+import { ethers } from 'ethers';
+import { connectWallet, createOrderTransaction, getPolicyByOrder, getOrderDetails } from '../utils/plasma';
 
 interface CheckoutProps {
   booking: any;
@@ -66,43 +68,103 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
     return window.localStorage.getItem('plasma_wallet');
   };
 
-  const getStoredChainId = () => {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage.getItem('plasma_chainId');
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(getStoredWallet());
+
+  const handleConnect = async () => {
+    try {
+      const { address } = await connectWallet();
+      setConnectedAddress(address);
+      window.localStorage.setItem('plasma_wallet', address);
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (!connectedAddress) {
+      await handleConnect();
+      if (!getStoredWallet()) return;
+    }
+
     setIsProcessing(true);
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      const { provider, address } = await connectWallet();
+
+      // Flight ID hash component
+      const flightIdString = `${booking.carrier}-${booking.number}-${searchParams.date}`;
+      const flightIdHash = ethers.id(flightIdString);
+
+      // Conversions
+      // Ensure we have correct decimals or just pass string. 
+      // The backend handles 18 decimals by default or "raw".
+      // Let's assume standard 18 decimals for now.
+
+      const order = await createOrderTransaction(provider, address, {
+        merchant: undefined, // use default
+        token: undefined, // use default
+        ticketPrice: baseFare.toString(),
+        premium: insuranceEnabled ? insuranceFee.toString() : "0",
+        flightIdHash,
+        departTs: Math.floor(new Date(booking.departure.includes(' ') ? booking.departure.replace(' ', 'T') : searchParams.date + "T" + booking.departure).getTime() / 1000),
+        arrivalTs: Math.floor(new Date(booking.arrival.includes(' ') ? booking.arrival.replace(' ', 'T') : searchParams.date + "T" + booking.arrival).getTime() / 1000),
+        refundOnCancel: insuranceEnabled
+      });
+
+      // Poll for policy / confirmation
+      // We have orderId, let's fetch details
+      let attempts = 0;
+      let confirmation: any = null;
+
+      while (attempts < 10) {
+        await new Promise(r => setTimeout(r, 2000));
+        try {
+          const orderDetails = await getOrderDetails(order.orderId);
+          if (orderDetails) {
+            const policy = orderDetails.policyId !== "0" ? await getPolicyByOrder(order.orderId) : null;
+
+            confirmation = {
+              id: order.orderId,
+              carrierName: booking.carrierName ?? booking.carrier,
+              carrierCode: booking.carrierCode ?? null,
+              carrier: booking.carrier,
+              origin: booking.origin ?? searchParams.from,
+              destination: booking.destination ?? searchParams.to,
+              date: booking.date ?? searchParams.date,
+              departure: booking.departure,
+              arrival: booking.arrival,
+              duration: booking.duration,
+              price: orderDetails.ticketPrice, // formatted?
+              passengers: searchParams.passengers,
+              direct: booking.direct ?? true,
+              currency: selectedCurrency,
+              txHash: order.txHash,
+              chainId: 0, // todo
+              payer: address,
+              insuranceEnabled: orderDetails.policyId !== "0",
+              status: 'confirmed',
+              policyId: orderDetails.policyId,
+              nft: policy
+            };
+            break;
+          }
+        } catch (e) {
+          console.error("Polling error", e);
+        }
+        attempts++;
+      }
+
+      if (confirmation) {
+        onComplete(confirmation);
+      } else {
+        throw new Error("Order creation detected but failed to fetch details.");
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      alert(`Payment failed: ${err.message}`);
+    } finally {
       setIsProcessing(false);
-      const chainIdRaw = getStoredChainId();
-      const parsedChainId = chainIdRaw
-        ? Number.parseInt(chainIdRaw, chainIdRaw.startsWith('0x') ? 16 : 10)
-        : undefined;
-      const confirmation = {
-        id: bookingId,
-        carrierName: booking.carrierName ?? booking.carrier,
-        carrierCode: booking.carrierCode ?? null,
-        carrier: booking.carrier,
-        origin: booking.origin ?? searchParams.from,
-        destination: booking.destination ?? searchParams.to,
-        date: booking.date ?? searchParams.date,
-        departure: booking.departure,
-        arrival: booking.arrival,
-        duration: booking.duration,
-        price: Number.isFinite(totalAmount) ? totalAmount : booking.price,
-        passengers: searchParams.passengers,
-        direct: booking.direct ?? true,
-        currency: selectedCurrency,
-        txHash: buildFakeTxHash(),
-        chainId: parsedChainId,
-        payer: getStoredWallet() ?? undefined,
-        insuranceEnabled,
-        status: 'confirmed',
-      };
-      onComplete(confirmation);
-    }, 2000);
+    }
   };
 
   return (
@@ -131,7 +193,7 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
                 <Plane className="w-5 h-5 text-white" />
               </motion.div>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                 <div>
@@ -188,17 +250,15 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
                   </p>
                 </div>
               </div>
-              
+
               <button
                 onClick={() => setInsuranceEnabled(!insuranceEnabled)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  insuranceEnabled ? 'bg-green-500' : 'bg-slate-300'
-                }`}
+                className={`relative w - 12 h - 6 rounded - full transition - colors ${insuranceEnabled ? 'bg-green-500' : 'bg-slate-300'
+                  } `}
               >
                 <div
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-                    insuranceEnabled ? 'translate-x-6' : ''
-                  }`}
+                  className={`absolute top - 0.5 left - 0.5 w - 5 h - 5 rounded - full bg - white transition - transform ${insuranceEnabled ? 'translate-x-6' : ''
+                    } `}
                 />
               </button>
             </div>
@@ -223,7 +283,7 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
                     <span>Baggage delay: 30 USDC compensation</span>
                   </div>
                 </div>
-                
+
                 <div className="mt-4 pt-4 border-t border-green-200 flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-700">Insurance Premium</span>
                   <span className="font-semibold text-slate-900">{insuranceFee} USDC</span>
@@ -255,17 +315,16 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
           {/* Payment Method */}
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-200">
             <h3 className="font-semibold text-slate-900 mb-4">Payment Method</h3>
-            
+
             <div className="grid grid-cols-3 gap-4 mb-6">
               {(['USDC', 'USDT', 'DAI'] as const).map((currency) => (
                 <button
                   key={currency}
                   onClick={() => setSelectedCurrency(currency)}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    selectedCurrency === currency
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`p - 4 rounded - xl border - 2 transition - all ${selectedCurrency === currency
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                    } `}
                 >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center mx-auto mb-2">
                     <span className="text-white font-semibold text-sm">{currency.charAt(0)}</span>
@@ -277,8 +336,10 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
 
             <div className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-lg p-3">
               <Wallet className="w-4 h-4" />
-              <span>Wallet: 0x742d...8f3a</span>
-              <span className="ml-auto text-green-600">Connected</span>
+              <span>{connectedAddress ? `Wallet: ${connectedAddress.slice(0, 6)}...${connectedAddress.slice(-4)} ` : 'Wallet not connected'}</span>
+              <span className={`ml-auto ${connectedAddress ? 'text-green-600' : 'text-slate-400'}`}>
+                {connectedAddress ? 'Connected' : <button onClick={handleConnect} className="underline hover:text-blue-600">Connect</button>}
+              </span>
             </div>
           </div>
         </div>
@@ -287,7 +348,7 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
         <div className="lg:col-span-1">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 sticky top-24">
             <h3 className="font-semibold text-slate-900 mb-6">Payment Breakdown</h3>
-            
+
             <div className="space-y-4 mb-6">
               <div className="flex items-center justify-between text-slate-700">
                 <span>Base Fare</span>
@@ -297,14 +358,14 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
                 <span>Subtotal</span>
                 <span>{baseFare} {selectedCurrency}</span>
               </div>
-              
+
               <div className="h-px bg-slate-200" />
-              
+
               <div className="flex items-center justify-between text-slate-700">
                 <span>Platform Fee</span>
                 <span>{platformFee} {selectedCurrency}</span>
               </div>
-              
+
               {insuranceEnabled && (
                 <div className="flex items-center justify-between text-slate-700">
                   <div className="flex items-center gap-1">
@@ -314,9 +375,9 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
                   <span>{insuranceFee} {selectedCurrency}</span>
                 </div>
               )}
-              
+
               <div className="h-px bg-slate-200" />
-              
+
               <div className="flex items-center justify-between text-lg font-bold text-slate-900">
                 <span>Total Amount</span>
                 <span>{totalAmount} {selectedCurrency}</span>
