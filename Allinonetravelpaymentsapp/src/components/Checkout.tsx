@@ -49,7 +49,7 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
     return `${shortBase}-${datePart}-${rand}`;
   }, [booking?.id, searchParams?.date]);
 
-  const insuranceFee = 12;
+  const insuranceFee = 10;
   const platformFee = 5;
   const baseFare = booking.price * searchParams.passengers;
   const totalAmount = baseFare + platformFee + (insuranceEnabled ? insuranceFee : 0);
@@ -91,23 +91,25 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
       const { provider, address } = await connectWallet();
 
       // Flight ID hash component
-      const flightIdString = `${booking.carrier}-${booking.number}-${searchParams.date}`;
+      const flightIdString = `${booking.carrier}-${booking.number}-${searchParams.date}-${Date.now()}-${Math.random()}`;
       const flightIdHash = ethers.id(flightIdString);
 
-      // Conversions
-      // Ensure we have correct decimals or just pass string. 
-      // The backend handles 18 decimals by default or "raw".
-      // Let's assume standard 18 decimals for now.
+      console.log("Preparing order with UNIQUE HASH:", {
+        ticketPrice: "0.01",  // HARDCODED MINIMUM (0.01 Token)
+        premium: "0.01",      // HARDCODED MINIMUM (0.01 Token)
+        flightIdHash,
+        refundOnCancel: true
+      });
 
       const order = await createOrderTransaction(provider, address, {
         merchant: undefined, // use default
         token: undefined, // use default
-        ticketPrice: baseFare.toString(),
-        premium: insuranceEnabled ? insuranceFee.toString() : "0",
+        ticketPrice: "0.01",  // HARDCODED MINIMUM
+        premium: "0.01",      // HARDCODED MINIMUM
         flightIdHash,
         departTs: Math.floor(new Date(booking.departure.includes(' ') ? booking.departure.replace(' ', 'T') : searchParams.date + "T" + booking.departure).getTime() / 1000),
         arrivalTs: Math.floor(new Date(booking.arrival.includes(' ') ? booking.arrival.replace(' ', 'T') : searchParams.date + "T" + booking.arrival).getTime() / 1000),
-        refundOnCancel: insuranceEnabled
+        refundOnCancel: true
       });
 
       // Poll for policy / confirmation

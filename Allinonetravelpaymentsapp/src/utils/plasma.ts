@@ -81,6 +81,16 @@ export async function createOrderTransaction(
   // 1. Get Config
   const config = await getPlasmaConfig();
 
+  // Debug: Check balance
+  const tokenContract = new ethers.Contract(
+    orderDetails.token || config.addresses.token,
+    ["function balanceOf(address) view returns (uint256)", "function symbol() view returns (string)"],
+    provider
+  );
+  const bal = await tokenContract.balanceOf(buyerAddress);
+  const symbol = await tokenContract.symbol();
+  console.log(`[DEBUG] User Balance: ${ethers.formatUnits(bal, 18)} ${symbol}`);
+
   // 2. Call backend to construct TX data
   const res = await fetch(`${API_BASE}/tx/create-order`, {
     method: 'POST',
