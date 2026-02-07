@@ -32,6 +32,19 @@ txRouter.post("/create-order", async (req, res) => {
   const premium = body.raw ? BigInt(body.premium) : ethers.parseUnits(body.premium, d);
   const total = ticketPrice + premium;
 
+  console.log(`[API] create-order request received:
+    - Buyer: ${body.buyer || 'N/A'}
+    - Merchant: ${merchant}
+    - Token: ${tokenAddr}
+    - Ticket Price: ${ticketPrice.toString()} (raw: ${body.ticketPrice})
+    - Premium: ${premium.toString()} (raw: ${body.premium})
+    - Flight Hash: ${body.flightIdHash}
+    - Departure: ${new Date(body.departTs * 1000).toISOString()} (${body.departTs})
+    - Arrival: ${new Date(body.arrivalTs * 1000).toISOString()} (${body.arrivalTs})
+    - RefundOnCancel: ${body.refundOnCancel}
+  `);
+
+  console.log(`[CONTRACT] Encoding createOrder for flightIdHash=${body.flightIdHash}`);
   const data = escrow.interface.encodeFunctionData("createOrder", [
     merchant,
     tokenAddr,
@@ -42,13 +55,17 @@ txRouter.post("/create-order", async (req, res) => {
     body.arrivalTs,
     body.refundOnCancel
   ]);
+  console.log(`[CONTRACT] createOrder encoded data length: ${data.length}`);
 
   let approvalTx: any = null;
   let needsApproval = false;
 
   if (body.buyer) {
+    console.log(`[CONTRACT] Checking allowance for buyer=${body.buyer} token=${tokenAddr}`);
     const allowance: bigint = await erc20.allowance(body.buyer, env.ESCROW_ADDRESS);
+    console.log(`[CONTRACT] Allowance: ${allowance}, Required: ${total}`);
     if (allowance < total) {
+      console.log(`[CONTRACT] Allowance insufficient. Encoding approve for ${total}`);
       needsApproval = true;
       const approveData = erc20.interface.encodeFunctionData("approve", [
         env.ESCROW_ADDRESS,
@@ -86,6 +103,7 @@ txRouter.post("/buy-insurance", async (req, res) => {
   const d = env.TOKEN_DECIMALS ?? 18;
   const premium = body.raw ? BigInt(body.premium) : ethers.parseUnits(body.premium, d);
 
+  console.log(`[CONTRACT] Encoding buyInsurance for orderId=${body.orderId} premium=${premium}`);
   const data = escrow.interface.encodeFunctionData("buyInsurance", [
     BigInt(body.orderId),
     premium
@@ -95,8 +113,11 @@ txRouter.post("/buy-insurance", async (req, res) => {
   let needsApproval = false;
 
   if (body.buyer) {
+    console.log(`[CONTRACT] Checking allowance for buyer=${body.buyer} at ${env.TOKEN_ADDRESS}`);
     const allowance: bigint = await erc20.allowance(body.buyer, env.ESCROW_ADDRESS);
+    console.log(`[CONTRACT] Allowance: ${allowance}, Required: ${premium}`);
     if (allowance < premium) {
+      console.log(`[CONTRACT] Allowance insufficient. Encoding approve for ${premium}`);
       needsApproval = true;
       const approveData = erc20.interface.encodeFunctionData("approve", [
         env.ESCROW_ADDRESS,

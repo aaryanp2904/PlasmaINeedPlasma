@@ -23,7 +23,9 @@ readRouter.get("/config", (_req, res) => {
 readRouter.get("/order/:orderId", async (req, res) => {
   const { escrow } = readClients();
   const orderId = BigInt(req.params.orderId);
+  console.log(`[CONTRACT] Fetching order details for orderId=${orderId}`);
   const o = await escrow.orders(orderId);
+  console.log(`[CONTRACT] Order details fetched: status=${o.status}, buyer=${o.buyer}`);
 
   res.json({
     orderId: orderId.toString(),
@@ -49,8 +51,10 @@ readRouter.get("/policy/:policyId", async (req, res) => {
   const { policy } = readClients();
   const policyId = BigInt(req.params.policyId);
 
+  console.log(`[CONTRACT] Fetching policy details for policyId=${policyId}`);
   const p = await policy.policies(policyId);
   const holder = await policy.ownerOf(policyId);
+  console.log(`[CONTRACT] Policy fetched: holder=${holder}, payout=${p.payout}`);
 
   res.json({
     policyId: policyId.toString(),
@@ -68,7 +72,9 @@ readRouter.get("/policy/:policyId", async (req, res) => {
 readRouter.get("/policy/by-order/:orderId", async (req, res) => {
   const { policy } = readClients();
   const orderId = BigInt(req.params.orderId);
+  console.log(`[CONTRACT] Fetching policyId for orderId=${orderId}`);
   const policyId = await policy.policyIdByOrder(orderId);
+  console.log(`[CONTRACT] Found policyId=${policyId}`);
 
   if (policyId === 0n) return res.json({ orderId: orderId.toString(), policyId: "0" });
 
@@ -101,12 +107,14 @@ readRouter.get("/orders", async (req, res) => {
   const topic = escrow.interface.getEvent("OrderCreated").topicHash;
   const buyerTopic = "0x" + q.buyer.toLowerCase().slice(2).padStart(64, "0");
 
+  console.log(`[CONTRACT] Fetching OrderCreated logs fromBlock=${fromBlock} buyer=${q.buyer}`);
   const logs = await provider.getLogs({
     address: env.ESCROW_ADDRESS,
     fromBlock,
     toBlock: "latest",
     topics: [topic, null, buyerTopic]
   });
+  console.log(`[CONTRACT] Found ${logs.length} logs`);
 
   const orders = logs.map((log) => {
     const parsed = escrow.interface.parseLog(log);
