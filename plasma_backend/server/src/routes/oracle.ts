@@ -49,7 +49,10 @@ oracleRouter.post("/sign", async (req, res) => {
   res.json({
     signer: await signer.getAddress(),
     signature: sig,
-    payload: value
+    payload: {
+      ...value,
+      orderId: value.orderId.toString()
+    }
   });
 });
 
@@ -83,3 +86,5 @@ oracleRouter.post("/finalize", async (req, res) => {
     reportedAt
   });
 });
+
+// Force reload timestamp: 123456789

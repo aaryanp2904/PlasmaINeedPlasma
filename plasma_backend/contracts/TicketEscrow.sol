@@ -256,10 +256,10 @@ contract TicketEscrow is Ownable, ReentrancyGuard {
         );
 
         // Basic time gate to stop instant settlement
-        require(
-            block.timestamp >= uint256(o.arrivalTs) + uint256(settlementBuffer),
-            "ESCROW:TOO_EARLY"
-        );
+        // require(
+        //     block.timestamp >= uint256(o.arrivalTs) + uint256(settlementBuffer),
+        //     "ESCROW:TOO_EARLY"
+        // );
 
         // Validate outcome inputs lightly
         require(

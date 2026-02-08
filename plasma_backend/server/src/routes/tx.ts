@@ -134,3 +134,36 @@ txRouter.post("/buy-insurance", async (req, res) => {
     meta: { premium: premium.toString(), decimals: d, needsApproval }
   });
 });
+
+const LogOrderSchema = z.object({
+  orderId: z.string(),
+  txHash: z.string(),
+  flightDetails: z.any()
+});
+
+import * as fs from 'fs';
+import * as path from 'path';
+
+txRouter.post("/log-order", async (req, res) => {
+  try {
+    const body = LogOrderSchema.parse(req.body);
+    const logFile = path.join(__dirname, "../../../flight_orders.txt");
+
+    const timestamp = new Date().toISOString();
+    const entry = `
+---------------------------------------------------
+Timestamp: ${timestamp}
+Order ID: ${body.orderId}
+Transaction Hash: ${body.txHash}
+Flight Details: ${JSON.stringify(body.flightDetails, null, 2)}
+---------------------------------------------------
+`;
+
+    fs.appendFileSync(logFile, entry);
+    console.log(`[LOG] Order ${body.orderId} logged to ${logFile}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[LOG] Failed to log order:", error);
+    res.status(500).json({ error: "Failed to log order" });
+  }
+});

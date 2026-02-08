@@ -118,6 +118,28 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
         refundOnCancel: true
       });
 
+      // Log the order
+      try {
+        await fetch('http://localhost:8000/api/tx/log-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: order.orderId,
+            txHash: order.txHash,
+            flightDetails: {
+              ...booking,
+              passengers: searchParams.passengers,
+              date: searchParams.date,
+              from: searchParams.from,
+              to: searchParams.to
+            }
+          })
+        });
+        console.log("Order logged successfully");
+      } catch (logErr) {
+        console.error("Failed to log order", logErr);
+      }
+
       // Poll for policy / confirmation
       // We have orderId, let's fetch details
       let attempts = 0;

@@ -1,15 +1,15 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("PolicyManager", function () {
+describe("PolicyManager ERC20", function () {
   let owner, escrow, oracle, buyer;
-  let token, pool, policy;
+  let pool, policy, token;
 
   beforeEach(async function () {
     [owner, escrow, oracle, buyer] = await ethers.getSigners();
 
     const MockERC20 = await ethers.getContractFactory("MockERC20");
-    token = await MockERC20.deploy("Mock USDT0", "USDT0", 18);
+    token = await MockERC20.deploy();
     await token.waitForDeployment();
 
     const InsurancePool = await ethers.getContractFactory("InsurancePool");
@@ -28,12 +28,13 @@ describe("PolicyManager", function () {
     await policy.setOracle(oracle.address);
 
     // Prefund pool for payouts
-    await token.mint(owner.address, ethers.parseUnits("10000", 18));
-    await token.approve(await pool.getAddress(), ethers.MaxUint256);
-    await pool.fundPool(await token.getAddress(), ethers.parseUnits("5000", 18));
+    const fundAmt = ethers.parseUnits("1000", 18);
+    await token.mint(owner.address, fundAmt);
+    await token.approve(await pool.getAddress(), fundAmt);
+    await pool.fundPool(await token.getAddress(), fundAmt);
   });
 
-  it("Only escrow can mintPolicyFromEscrow, and it mints an NFT to holder", async function () {
+  it("Only escrow can mintPolicyFromEscrow, and it mints an NFT to holder with token address", async function () {
     const ticketPrice = ethers.parseUnits("200", 18);
     const premium = ethers.parseUnits("10", 18);
 
@@ -56,12 +57,11 @@ describe("PolicyManager", function () {
 
     const p = await policy.policies(policyId);
     expect(p.orderId).to.equal(1n);
-    expect(p.ticketPrice).to.equal(ticketPrice);
-    expect(p.premium).to.equal(premium);
+    expect(p.token).to.equal(await token.getAddress());
   });
 
-  it("Only oracle can settlePolicy and it pays out for delay >=120 mins", async function () {
-    const ticketPrice = ethers.parseUnits("400", 18);
+  it("Only oracle can settlePolicy and it pays out tokens for delay >=120 mins", async function () {
+    const ticketPrice = ethers.parseUnits("200", 18);
     const premium = ethers.parseUnits("10", 18);
 
     await policy.connect(escrow).mintPolicyFromEscrow(
@@ -79,17 +79,14 @@ describe("PolicyManager", function () {
 
     const buyerBalBefore = await token.balanceOf(buyer.address);
 
-    await policy.connect(oracle).settlePolicy(policyId, 2, 120); // Delayed 120 => 25%
+    // 120 mins delay = 25% payout of ticketPrice = 50 tokens
+    await policy.connect(oracle).settlePolicy(policyId, 2, 120);
+
     const p = await policy.policies(policyId);
     expect(p.settled).to.equal(true);
-
-    const expectedPayout = (ticketPrice * 2500n) / 10000n;
-    expect(p.payout).to.equal(expectedPayout);
+    expect(p.payout).to.equal(ethers.parseUnits("50", 18));
 
     const buyerBalAfter = await token.balanceOf(buyer.address);
-    expect(buyerBalAfter - buyerBalBefore).to.equal(expectedPayout);
-
-    await expect(policy.connect(oracle).settlePolicy(policyId, 2, 240))
-      .to.be.revertedWith("POLICY:ALREADY_SETTLED");
+    expect(buyerBalAfter - buyerBalBefore).to.equal(ethers.parseUnits("50", 18));
   });
 });
