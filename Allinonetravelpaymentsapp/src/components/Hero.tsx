@@ -24,7 +24,7 @@ export function Hero({ onNavigate }: HeroProps) {
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => onNavigate('dashboard')}
             className="px-4 py-2 text-slate-700 hover:text-slate-900 transition-colors"
           >
@@ -97,12 +97,12 @@ export function Hero({ onNavigate }: HeroProps) {
             {/* Main Card */}
             <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-blue-500/20">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-indigo-600/90 z-10" />
-              <ImageWithFallback 
+              <ImageWithFallback
                 src="https://images.unsplash.com/photo-1762668155432-7994745e815a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhaXJwb3J0JTIwdHJhdmVsJTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NzA0NzEyOTB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                 alt="Modern travel"
                 className="w-full h-[500px] object-cover"
               />
-              
+
               {/* Floating Cards */}
               <div className="absolute inset-0 z-20 p-8 flex flex-col justify-between">
                 {/* Transport Card */}
@@ -153,28 +153,7 @@ export function Hero({ onNavigate }: HeroProps) {
               </div>
             </div>
 
-            {/* Floating Stats */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.9, duration: 0.5 }}
-              className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-slate-200 flex gap-8"
-            >
-              <div className="text-center">
-                <p className="text-2xl font-bold text-slate-900">$2.4M+</p>
-                <p className="text-sm text-slate-600">Processed</p>
-              </div>
-              <div className="w-px bg-slate-200" />
-              <div className="text-center">
-                <p className="text-2xl font-bold text-slate-900">12K+</p>
-                <p className="text-sm text-slate-600">Bookings</p>
-              </div>
-              <div className="w-px bg-slate-200" />
-              <div className="text-center">
-                <p className="text-2xl font-bold text-slate-900">98%</p>
-                <p className="text-sm text-slate-600">Satisfaction</p>
-              </div>
-            </motion.div>
+
           </motion.div>
         </div>
       </div>

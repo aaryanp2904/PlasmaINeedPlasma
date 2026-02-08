@@ -4,11 +4,18 @@ pragma solidity ^0.8.23;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {
+    ReentrancyGuard
+} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IInsurancePool {
     function available(address token) external view returns (uint256);
-    function payClaim(address token, address to, uint256 amount, uint256 policyId) external;
+    function payClaim(
+        address token,
+        address to,
+        uint256 amount,
+        uint256 policyId
+    ) external;
 }
 
 /// @notice ERC-721 policies + deterministic parametric payouts funded by InsurancePool.
@@ -32,7 +39,7 @@ contract PolicyManager is ERC721, Ownable, ReentrancyGuard {
         address token;
         uint256 ticketPrice;
         uint256 premium;
-        uint40 expiryTs;   // for UX; not enforced as a hard stop
+        uint40 expiryTs; // for UX; not enforced as a hard stop
         bool settled;
         uint256 payout;
     }
@@ -51,8 +58,17 @@ contract PolicyManager is ERC721, Ownable, ReentrancyGuard {
     event OracleSet(address indexed oracle);
     event PoolSet(address indexed pool);
 
-    event PolicyMinted(uint256 indexed policyId, uint256 indexed orderId, address indexed holder);
-    event PolicySettled(uint256 indexed policyId, uint8 status, uint32 delayMins, uint256 payout);
+    event PolicyMinted(
+        uint256 indexed policyId,
+        uint256 indexed orderId,
+        address indexed holder
+    );
+    event PolicySettled(
+        uint256 indexed policyId,
+        uint8 status,
+        uint32 delayMins,
+        uint256 payout
+    );
 
     modifier onlyEscrow() {
         require(msg.sender == escrow, "POLICY:NOT_ESCROW");
@@ -64,7 +80,9 @@ contract PolicyManager is ERC721, Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(address _pool) ERC721("Flight Policy", "FPOL") Ownable(msg.sender) {
+    constructor(
+        address _pool
+    ) ERC721("Flight Policy", "FPOL") Ownable(msg.sender) {
         require(_pool != address(0), "POLICY:ZERO_POOL");
         pool = IInsurancePool(_pool);
         emit PoolSet(_pool);
@@ -104,12 +122,7 @@ contract PolicyManager is ERC721, Ownable, ReentrancyGuard {
         uint256 ticketPrice,
         uint256 premium,
         uint40 expiryTs
-    )
-        external
-        onlyEscrow
-        nonReentrant
-        returns (uint256 policyId)
-    {
+    ) external onlyEscrow nonReentrant returns (uint256 policyId) {
         require(holder != address(0), "POLICY:ZERO_HOLDER");
         require(token != address(0), "POLICY:ZERO_TOKEN");
         require(ticketPrice > 0, "POLICY:ZERO_TICKET");
@@ -134,26 +147,30 @@ contract PolicyManager is ERC721, Ownable, ReentrancyGuard {
         emit PolicyMinted(policyId, orderId, holder);
     }
 
-    function settlePolicy(uint256 policyId, uint8 status, uint32 delayMins)
-        external
-        onlyOracle
-        nonReentrant
-    {
+    function settlePolicy(
+        uint256 policyId,
+        uint8 status,
+        uint32 delayMins
+    ) external onlyOracle nonReentrant {
         _settle(policyId, status, delayMins);
     }
 
     /// @notice Oracle convenience: settle by orderId. If no policy exists, it no-ops.
-    function settlePolicyByOrder(uint256 orderId, uint8 status, uint32 delayMins)
-        external
-        onlyOracle
-        nonReentrant
-    {
+    function settlePolicyByOrder(
+        uint256 orderId,
+        uint8 status,
+        uint32 delayMins
+    ) external onlyOracle nonReentrant {
         uint256 policyId = policyIdByOrder[orderId];
         if (policyId == 0) return;
         _settle(policyId, status, delayMins);
     }
 
-    function _settle(uint256 policyId, uint8 status, uint32 delayMins) internal {
+    function _settle(
+        uint256 policyId,
+        uint8 status,
+        uint32 delayMins
+    ) internal {
         Policy storage p = policies[policyId];
         require(p.orderId != 0, "POLICY:NOT_FOUND");
         require(!p.settled, "POLICY:ALREADY_SETTLED");
@@ -161,12 +178,33 @@ contract PolicyManager is ERC721, Ownable, ReentrancyGuard {
         uint256 payout = 0;
 
         if (status == STATUS_CANCELLED) {
-            payout = (p.ticketPrice * BPS_100) / 10000;
+            payout = (p.ticketPrice * 100) / 100; // 100%
         } else if (status == STATUS_DELAYED) {
-            if (delayMins >= DELAY_L2_MINS) {
-                payout = (p.ticketPrice * BPS_50) / 10000;
-            } else if (delayMins >= DELAY_L1_MINS) {
-                payout = (p.ticketPrice * BPS_25) / 10000;
+            if (delayMins > 120) {
+                // For every hour (or part thereof? Prompt said "for each hour")
+                // "if the flight is delayed by more than 2 hours then for each hour it's a 10% extra refund"
+                // Let's interpret "for each hour" as "per started hour after 2h".
+                // e.g. 121 mins => 10%. 181 mins => 20%.
+
+                uint256 hoursOver = (delayMins - 120) / 60;
+                // hoursOver = 0 for 120..179 mins
+                // hoursOver = 1 for 180..239 mins
+
+                // Base 10% for being > 120m, plus 10% for each additional full hour block?
+                // The user said "for each hour it's a 10% extra refund".
+                // Let's model:
+                // 2h < delay <= 3h : 10%
+                // 3h < delay <= 4h : 20%
+                // ...
+
+                uint256 percentage = (hoursOver + 1) * 10;
+                if (percentage > 70) {
+                    percentage = 70;
+                }
+
+                payout = (p.ticketPrice * percentage) / 100;
+            } else {
+                payout = 0;
             }
         } // OnTime/Unknown => 0
 
@@ -176,7 +214,10 @@ contract PolicyManager is ERC721, Ownable, ReentrancyGuard {
         if (payout > 0) {
             // Pay current NFT holder
             address to = ownerOf(policyId);
-            require(pool.available(p.token) >= payout, "POLICY:POOL_INSUFFICIENT");
+            require(
+                pool.available(p.token) >= payout,
+                "POLICY:POOL_INSUFFICIENT"
+            );
             pool.payClaim(p.token, to, payout, policyId);
         }
 

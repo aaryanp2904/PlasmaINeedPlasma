@@ -91,7 +91,9 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
       const { provider, address } = await connectWallet();
 
       // Flight ID hash component
-      const flightIdString = `${booking.carrier}-${booking.number}-${searchParams.date}-${Date.now()}-${Math.random()}`;
+      // distinct flight ID for settlement (Flight Number + Date)
+      // booking.id comes from backend as carrier+number (e.g. "UA123")
+      const flightIdString = `${booking.id}-${searchParams.date}`;
       const flightIdHash = ethers.id(flightIdString);
 
       // Calculate real amounts for the contract

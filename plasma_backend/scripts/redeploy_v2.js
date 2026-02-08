@@ -43,10 +43,9 @@ async function main() {
     console.log("Pool initialized with PolicyManager");
 
     // PolicyManager needs to trust Escrow and Oracle
-    await policyManager.setAuthorizedCallers(
-        await escrow.getAddress(),
-        await oracle.getAddress()
-    );
+    // PolicyManager needs to trust Escrow and Oracle
+    await policyManager.setEscrow(await escrow.getAddress());
+    await policyManager.setOracle(await oracle.getAddress());
     console.log("PolicyManager initialized with Escrow and Oracle");
 
     // Escrow needs to trust PolicyManager, Pool, and Oracle

@@ -88,6 +88,7 @@ type FlightSearchRequest = {
 type FlightOffer = {
   id: string;
   carrier: string;
+  number?: string;
   departure: string;
   arrival: string;
   duration: string;
@@ -147,9 +148,15 @@ export async function searchFlights(req: FlightSearchRequest): Promise<FlightSea
       const segs = itineraries[0]?.segments ?? [];
       if (!segs.length) continue;
 
-      const dep = segs[0]?.departure?.at;
+      const segment = segs[0];
+      const dep = segment.departure?.at;
       const arr = segs[segs.length - 1]?.arrival?.at;
       if (!dep || !arr) continue;
+
+      const carrierCode = segment.carrierCode;
+      const flightNumber = segment.number;
+      // Synthesize a flight ID: e.g. "UA123"
+      const realFlightId = (carrierCode && flightNumber) ? `${carrierCode}${flightNumber}` : String(offer?.id ?? "");
 
       const direct = segs.length === 1;
       const duration = itineraries[0]?.duration ?? "PT0M";
@@ -158,14 +165,15 @@ export async function searchFlights(req: FlightSearchRequest): Promise<FlightSea
       if (!Number.isFinite(priceTotal)) continue;
 
       offers.push({
-        id: String(offer?.id ?? ""),
+        id: realFlightId,
         carrier: pickCarrier(offer),
+        number: flightNumber, // Add explicit flight number
         departure: isoToPretty(dep),
         arrival: isoToPretty(arr),
         duration,
         price: priceTotal,
         direct,
-        seats: null,
+        seats: Number(offer?.numberOfBookableSeats) || null,
       });
     } catch {
       continue;

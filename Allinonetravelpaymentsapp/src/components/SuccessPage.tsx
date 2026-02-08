@@ -1,5 +1,6 @@
 import React from 'react';
-import { CheckCircle2, Copy, ExternalLink, Shield, ArrowLeft, Plane, FileText } from 'lucide-react';
+import { CheckCircle2, Copy, ExternalLink, Shield, ArrowLeft, Plane, FileText, QrCode } from 'lucide-react';
+import QRCode from 'qrcode';
 
 interface SuccessPageProps {
     booking: any;
@@ -7,14 +8,71 @@ interface SuccessPageProps {
     plasmaExplorerBaseUrl?: string;
 }
 
+function safeJsonStringify(obj: any) {
+    try {
+        return JSON.stringify(obj);
+    } catch {
+        return String(obj);
+    }
+}
+
+function makeBookingRef() {
+    return `PLS-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Math.random()
+        .toString(36)
+        .slice(2, 6)
+        .toUpperCase()}`;
+}
+
 export function SuccessPage({
     booking,
     onBackToHome,
-    plasmaExplorerBaseUrl = 'https://explorer.plasma.xyz/tx/'
+    plasmaExplorerBaseUrl = 'https://testnet.plasmascan.to/tx/'
 }: SuccessPageProps) {
     const { addresses, payer, txHash, id, policyId, insuranceEnabled } = booking;
 
+    // QR Code State
+    const [bookingRef] = React.useState(() => makeBookingRef());
+    const [qrDataUrl, setQrDataUrl] = React.useState<string>('');
     const [copied, setCopied] = React.useState<string | null>(null);
+
+    const explorerUrl = txHash ? `${plasmaExplorerBaseUrl}${txHash}` : '#';
+
+    // Generate QR Payload
+    const qrPayload = React.useMemo(() => {
+        const payload = {
+            type: 'PLASMA_TRAVEL_TICKET',
+            ref: bookingRef,
+            offerId: booking.id,
+            carrier: booking.carrierName ?? booking.carrier ?? 'AIRLINE',
+            route: `${booking.origin}-${booking.destination}`,
+            date: booking.date,
+            pax: booking.passengers || 1,
+            amount: booking.price,
+            txHash: booking.txHash ?? null,
+            payer: payer ?? null,
+            issuedAt: new Date().toISOString(),
+        };
+        return safeJsonStringify(payload);
+    }, [booking, bookingRef, payer]);
+
+    // Generate QR Image
+    React.useEffect(() => {
+        let cancelled = false;
+        async function gen() {
+            try {
+                const url = await QRCode.toDataURL(qrPayload, {
+                    errorCorrectionLevel: 'M',
+                    margin: 2,
+                    width: 280,
+                });
+                if (!cancelled) setQrDataUrl(url);
+            } catch (err) {
+                console.error("QR Generation failed", err);
+            }
+        }
+        gen();
+        return () => { cancelled = true; };
+    }, [qrPayload]);
 
     const copyToClipboard = async (text: string, label: string) => {
         try {
@@ -25,8 +83,6 @@ export function SuccessPage({
             console.error('Failed to copy endpoint', err);
         }
     };
-
-    const explorerUrl = txHash ? `${plasmaExplorerBaseUrl}${txHash}` : '#';
 
     return (
         <div className="max-w-4xl mx-auto px-6 pt-12 pb-20">
@@ -69,6 +125,25 @@ export function SuccessPage({
                             <p className="font-medium text-slate-900">{booking.carrierName || booking.carrier || 'Airline'}</p>
                         </div>
                     </div>
+
+                    {/* QR Code Card (New) */}
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center text-center">
+                        <div className="mb-2 text-sm font-medium text-slate-900 flex items-center gap-2">
+                            <QrCode className="w-4 h-4" />
+                            Boarding Pass QR
+                        </div>
+                        {qrDataUrl ? (
+                            <img src={qrDataUrl} alt="Ticket QR" className="w-48 h-48 border border-slate-100 rounded-lg" />
+                        ) : (
+                            <div className="w-48 h-48 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 text-xs">
+                                Generating QR...
+                            </div>
+                        )}
+                        <p className="mt-3 text-xs text-slate-500">
+                            Ref: <span className="font-mono font-semibold text-slate-700">{bookingRef}</span>
+                        </p>
+                    </div>
+
 
                     <button
                         onClick={onBackToHome}

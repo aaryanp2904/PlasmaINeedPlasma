@@ -3,7 +3,7 @@ import { ArrowLeft, Plane, Calendar, MapPin, Users, Search } from 'lucide-react'
 import { SearchResults } from './SearchResults';
 import { Checkout } from './Checkout';
 import { BookingConfirmation } from './BookingConfirmation';
-import { SuccessPage } from './SuccessPage';
+import { TransactionSuccess } from './TransactionSuccess';
 
 type View = 'home' | 'booking' | 'dashboard';
 type TransportType = 'flight';
@@ -222,9 +222,9 @@ export function BookingFlow({ onNavigate, onBookingComplete }: BookingFlowProps)
       )}
 
       {bookingStep === 'confirmation' && confirmedBooking && (
-        <SuccessPage
+        <TransactionSuccess
           booking={confirmedBooking}
-          onBackToHome={handleBackToSearch}
+          onNavigate={onNavigate}
         />
       )}
     </div>

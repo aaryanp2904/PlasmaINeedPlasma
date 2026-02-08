@@ -17,7 +17,8 @@ export const InsurancePoolAbi = [
 
 export const OracleAbi = [
   "function finalized(uint256 orderId) view returns (bool)",
-  "function finalizeOutcome(uint256 orderId,uint8 status,uint32 delayMins,uint40 reportedAt,bytes[] sigs)"
+  "function finalizeOutcome(uint256 orderId,uint8 status,uint32 delayMins,uint40 reportedAt,bytes[] sigs)",
+  "function finalizeFlightOutcome(bytes32 flightIdHash,uint8 status,uint32 delayMins,uint40 reportedAt,bytes[] sigs)"
 ];
 
 export const ERC20Abi = [
