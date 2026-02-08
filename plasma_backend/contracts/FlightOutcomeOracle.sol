@@ -165,7 +165,10 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
         uint8 policyStatus = status;
         uint32 policyDelay = delayMins;
 
-        if (refundOnCancel && status == STATUS_CANCELLED) {
+        if (
+            refundOnCancel &&
+            (status == STATUS_CANCELLED || status == STATUS_DELAYED)
+        ) {
             policyStatus = STATUS_ON_TIME;
             policyDelay = 0;
         }
@@ -248,7 +251,10 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
             uint8 policyStatus = status;
             uint32 policyDelay = delayMins;
 
-            if (refundOnCancel && status == STATUS_CANCELLED) {
+            if (
+                refundOnCancel &&
+                (status == STATUS_CANCELLED || status == STATUS_DELAYED)
+            ) {
                 policyStatus = STATUS_ON_TIME;
                 policyDelay = 0;
             }
