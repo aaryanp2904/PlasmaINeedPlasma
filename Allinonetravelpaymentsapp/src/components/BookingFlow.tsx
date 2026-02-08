@@ -3,6 +3,7 @@ import { ArrowLeft, Plane, Calendar, MapPin, Users, Search } from 'lucide-react'
 import { SearchResults } from './SearchResults';
 import { Checkout } from './Checkout';
 import { BookingConfirmation } from './BookingConfirmation';
+import { SuccessPage } from './SuccessPage';
 
 type View = 'home' | 'booking' | 'dashboard';
 type TransportType = 'flight';
@@ -74,7 +75,7 @@ export function BookingFlow({ onNavigate, onBookingComplete }: BookingFlowProps)
             </button>
             <h1 className="text-xl font-semibold text-slate-900">Book Your Flight</h1>
           </div>
-          <button 
+          <button
             onClick={() => onNavigate('dashboard')}
             className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
           >
@@ -221,7 +222,7 @@ export function BookingFlow({ onNavigate, onBookingComplete }: BookingFlowProps)
       )}
 
       {bookingStep === 'confirmation' && confirmedBooking && (
-        <BookingConfirmation
+        <SuccessPage
           booking={confirmedBooking}
           onBackToHome={handleBackToSearch}
         />

@@ -28,11 +28,9 @@ txRouter.post("/create-order", async (req, res) => {
   if (!merchant) return res.status(400).json({ error: "merchant missing (provide merchant or DEFAULT_MERCHANT)" });
 
   const d = env.TOKEN_DECIMALS ?? 18;
-  // FORCE MINIMUM AMOUNTS FOR TESTING
-  // const ticketPrice = body.raw ? BigInt(body.ticketPrice) : ethers.parseUnits(body.ticketPrice, d);
-  // const premium = body.raw ? BigInt(body.premium) : ethers.parseUnits(body.premium, d);
-  const ticketPrice = BigInt(1);
-  const premium = BigInt(1);
+  // Use values from request body
+  const ticketPrice = body.raw ? BigInt(body.ticketPrice) : ethers.parseUnits(body.ticketPrice, d);
+  const premium = body.raw ? BigInt(body.premium) : ethers.parseUnits(body.premium, d);
   const total = ticketPrice + premium;
 
   console.log(`[API] create-order request received:

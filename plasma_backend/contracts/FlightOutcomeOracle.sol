@@ -3,17 +3,40 @@
 pragma solidity ^0.8.23;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {
+    ReentrancyGuard
+} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 interface ITicketEscrowOracle {
-    function settleOrder(uint256 orderId, uint8 outcomeStatus, uint32 delayMins) external;
-    function getOrderParams(uint256 orderId) external view returns (uint40 arrivalTs, bool refundOnCancel, uint256 policyId, uint8 status);
+    function settleOrder(
+        uint256 orderId,
+        uint8 outcomeStatus,
+        uint32 delayMins
+    ) external;
+    function getOrderParams(
+        uint256 orderId
+    )
+        external
+        view
+        returns (
+            uint40 arrivalTs,
+            bool refundOnCancel,
+            uint256 policyId,
+            uint8 status
+        );
+    function getFlightOrders(
+        bytes32 flightIdHash
+    ) external view returns (uint256[] memory);
 }
 
 interface IPolicyManagerOracle {
-    function settlePolicyByOrder(uint256 orderId, uint8 status, uint32 delayMins) external;
+    function settlePolicyByOrder(
+        uint256 orderId,
+        uint8 status,
+        uint32 delayMins
+    ) external;
 }
 
 /// @notice k-of-n committee oracle with EIP-712 signatures. Anyone can submit, but must include valid sigs.
@@ -26,20 +49,32 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
     uint8 internal constant STATUS_CANCELLED = 3;
 
     bytes32 private constant OUTCOME_TYPEHASH =
-        keccak256("Outcome(uint256 orderId,uint8 status,uint32 delayMins,uint40 reportedAt)");
+        keccak256(
+            "Outcome(uint256 orderId,uint8 status,uint32 delayMins,uint40 reportedAt)"
+        );
+
+    bytes32 private constant FLIGHT_OUTCOME_TYPEHASH =
+        keccak256(
+            "FlightOutcome(bytes32 flightIdHash,uint8 status,uint32 delayMins,uint40 reportedAt)"
+        );
 
     ITicketEscrowOracle public escrow;
     IPolicyManagerOracle public policyManager;
 
-    uint256 public threshold;        // k
-    uint256 public signerCount;      // n (<=256)
+    uint256 public threshold; // k
+    uint256 public signerCount; // n (<=256)
 
     mapping(address => bool) public isSigner;
     mapping(address => uint8) public signerIndex; // 0..n-1
 
     mapping(uint256 => bool) public finalized;
 
-    event OutcomeFinalized(uint256 indexed orderId, uint8 status, uint32 delayMins, uint40 reportedAt);
+    event OutcomeFinalized(
+        uint256 indexed orderId,
+        uint8 status,
+        uint32 delayMins,
+        uint40 reportedAt
+    );
     event PolicySettlementFailed(uint256 indexed orderId, bytes reason);
 
     constructor(
@@ -47,14 +82,17 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
         address _policyManager,
         uint256 _threshold,
         address[] memory signers
-    )
-        Ownable(msg.sender)
-        EIP712("FlightOutcomeOracle", "1")
-    {
+    ) Ownable(msg.sender) EIP712("FlightOutcomeOracle", "1") {
         require(_escrow != address(0), "ORACLE:ZERO_ESCROW");
         require(_policyManager != address(0), "ORACLE:ZERO_PM");
-        require(signers.length > 0 && signers.length <= 256, "ORACLE:BAD_SIGNERS_LEN");
-        require(_threshold > 0 && _threshold <= signers.length, "ORACLE:BAD_THRESHOLD");
+        require(
+            signers.length > 0 && signers.length <= 256,
+            "ORACLE:BAD_SIGNERS_LEN"
+        );
+        require(
+            _threshold > 0 && _threshold <= signers.length,
+            "ORACLE:BAD_THRESHOLD"
+        );
 
         escrow = ITicketEscrowOracle(_escrow);
         policyManager = IPolicyManagerOracle(_policyManager);
@@ -71,7 +109,10 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
     }
 
     function setThreshold(uint256 _threshold) external onlyOwner {
-        require(_threshold > 0 && _threshold <= signerCount, "ORACLE:BAD_THRESHOLD");
+        require(
+            _threshold > 0 && _threshold <= signerCount,
+            "ORACLE:BAD_THRESHOLD"
+        );
         threshold = _threshold;
     }
 
@@ -83,22 +124,20 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
         uint32 delayMins,
         uint40 reportedAt,
         bytes[] calldata sigs
-    )
-        external
-        nonReentrant
-    {
+    ) external nonReentrant {
         require(!finalized[orderId], "ORACLE:ALREADY_FINAL");
-        require(status == STATUS_ON_TIME || status == STATUS_DELAYED || status == STATUS_CANCELLED, "ORACLE:BAD_STATUS");
+        require(
+            status == STATUS_ON_TIME ||
+                status == STATUS_DELAYED ||
+                status == STATUS_CANCELLED,
+            "ORACLE:BAD_STATUS"
+        );
         if (status != STATUS_DELAYED) delayMins = 0;
         require(sigs.length >= threshold, "ORACLE:NOT_ENOUGH_SIGS");
 
-        bytes32 structHash = keccak256(abi.encode(
-            OUTCOME_TYPEHASH,
-            orderId,
-            status,
-            delayMins,
-            reportedAt
-        ));
+        bytes32 structHash = keccak256(
+            abi.encode(OUTCOME_TYPEHASH, orderId, status, delayMins, reportedAt)
+        );
         bytes32 digest = _hashTypedDataV4(structHash);
 
         // verify k distinct signers using a bitmap (requires n<=256)
@@ -122,7 +161,7 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
         emit OutcomeFinalized(orderId, status, delayMins, reportedAt);
 
         // If the order is configured to refund on cancel, suppress cancellation insurance payout to avoid double-payment.
-        (, bool refundOnCancel,,) = escrow.getOrderParams(orderId);
+        (, bool refundOnCancel, , ) = escrow.getOrderParams(orderId);
         uint8 policyStatus = status;
         uint32 policyDelay = delayMins;
 
@@ -132,13 +171,100 @@ contract FlightOutcomeOracle is Ownable, ReentrancyGuard, EIP712 {
         }
 
         // Don't block escrow settlement if pool is short etc.
-        try policyManager.settlePolicyByOrder(orderId, policyStatus, policyDelay) {
+        try
+            policyManager.settlePolicyByOrder(
+                orderId,
+                policyStatus,
+                policyDelay
+            )
+        {
             // ok
         } catch (bytes memory reason) {
             emit PolicySettlementFailed(orderId, reason);
         }
-
         // This moves the ticketPrice (merchant release or buyer refund)
         escrow.settleOrder(orderId, status, delayMins);
+    }
+
+    /// @notice Finalize an outcome for an entire flight (batch settlement).
+    function finalizeFlightOutcome(
+        bytes32 flightIdHash,
+        uint8 status,
+        uint32 delayMins,
+        uint40 reportedAt,
+        bytes[] calldata sigs
+    ) external nonReentrant {
+        require(
+            status == STATUS_ON_TIME ||
+                status == STATUS_DELAYED ||
+                status == STATUS_CANCELLED,
+            "ORACLE:BAD_STATUS"
+        );
+        if (status != STATUS_DELAYED) delayMins = 0;
+        require(sigs.length >= threshold, "ORACLE:NOT_ENOUGH_SIGS");
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                FLIGHT_OUTCOME_TYPEHASH,
+                flightIdHash,
+                status,
+                delayMins,
+                reportedAt
+            )
+        );
+        bytes32 digest = _hashTypedDataV4(structHash);
+
+        // verify k distinct signers
+        uint256 seen = 0;
+        uint256 valid = 0;
+
+        for (uint256 i = 0; i < sigs.length && valid < threshold; i++) {
+            address recovered = digest.recover(sigs[i]);
+            if (!isSigner[recovered]) continue;
+
+            uint256 bit = 1 << signerIndex[recovered];
+            if (seen & bit != 0) continue;
+
+            seen |= bit;
+            valid++;
+        }
+
+        require(valid >= threshold, "ORACLE:BAD_SIGS");
+
+        // Fetch all orders for this flight
+        uint256[] memory orderIds = escrow.getFlightOrders(flightIdHash);
+
+        for (uint256 i = 0; i < orderIds.length; i++) {
+            uint256 orderId = orderIds[i];
+
+            // Skip already finalized orders to allow re-runs (or partials) without revert
+            if (finalized[orderId]) continue;
+
+            finalized[orderId] = true;
+            emit OutcomeFinalized(orderId, status, delayMins, reportedAt);
+
+            // Logic duplicated from finalizeOutcome (could refill to internal func to save code size)
+            (, bool refundOnCancel, , ) = escrow.getOrderParams(orderId);
+            uint8 policyStatus = status;
+            uint32 policyDelay = delayMins;
+
+            if (refundOnCancel && status == STATUS_CANCELLED) {
+                policyStatus = STATUS_ON_TIME;
+                policyDelay = 0;
+            }
+
+            try
+                policyManager.settlePolicyByOrder(
+                    orderId,
+                    policyStatus,
+                    policyDelay
+                )
+            {
+                // ok
+            } catch (bytes memory reason) {
+                emit PolicySettlementFailed(orderId, reason);
+            }
+            escrow.settleOrder(orderId, status, delayMins);
+        }
     }
 }

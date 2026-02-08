@@ -150,7 +150,15 @@ export async function createOrderTransaction(
   const orderIdHex = escrowLog.topics[1];
   const orderId = BigInt(orderIdHex).toString();
 
-  return { orderId, txHash: receipt.hash };
+  return {
+    orderId,
+    txHash: receipt.hash,
+    addresses: {
+      merchant: orderDetails.merchant || config.addresses.merchantDefault,
+      token: orderDetails.token || config.addresses.token,
+      escrow: config.addresses.escrow
+    }
+  };
 }
 
 const PLASMA_CHAIN_ID_HEX = '0x2612'; // 9746

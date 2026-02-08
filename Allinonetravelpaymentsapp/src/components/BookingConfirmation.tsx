@@ -22,6 +22,11 @@ type BookingInput = {
   payer?: string;
   insuranceEnabled?: boolean;
   status?: string;
+  addresses?: {
+    merchant?: string;
+    token?: string;
+    escrow?: string;
+  };
 };
 
 type ConfirmationProps = {
@@ -332,6 +337,52 @@ export function BookingConfirmation({
           )}
         </div>
       </div>
+
+      {booking.addresses && (
+        <div className="mt-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Contract Details</h2>
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-slate-500 mb-1">Merchant</p>
+              <div className="font-mono bg-slate-50 p-2 rounded-lg text-slate-700 break-all select-all">
+                {booking.addresses.merchant}
+              </div>
+            </div>
+            <div>
+              <p className="text-slate-500 mb-1">Buyer</p>
+              <div className="font-mono bg-slate-50 p-2 rounded-lg text-slate-700 break-all select-all">
+                {booking.payer}
+              </div>
+            </div>
+            <div>
+              <p className="text-slate-500 mb-1">Token (mUSD)</p>
+              <div className="font-mono bg-slate-50 p-2 rounded-lg text-slate-700 break-all select-all">
+                {booking.addresses.token}
+              </div>
+            </div>
+            <div>
+              <p className="text-slate-500 mb-1">Escrow Contract</p>
+              <div className="font-mono bg-slate-50 p-2 rounded-lg text-slate-700 break-all select-all">
+                {booking.addresses.escrow}
+              </div>
+            </div>
+            {booking.id && (
+              <div>
+                <p className="text-slate-500 mb-1">Order ID</p>
+                <div className="font-mono bg-slate-50 p-2 rounded-lg text-slate-700 break-all select-all">
+                  {booking.id}
+                </div>
+              </div>
+            )}
+            <div>
+              <p className="text-slate-500 mb-1">Policy ID</p>
+              <div className="font-mono bg-slate-50 p-2 rounded-lg text-slate-700 break-all select-all">
+                {(booking as any).policyId || "N/A"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 flex flex-col sm:flex-row gap-3">
         <button

@@ -32,7 +32,7 @@ function formatDuration(duration: string): string {
 }
 
 export function Checkout({ booking, searchParams, onBack, onComplete }: CheckoutProps) {
-  const [insuranceEnabled, setInsuranceEnabled] = useState(false);
+  const [insuranceEnabled, setInsuranceEnabled] = useState(true);
   const [selectedCurrency, setSelectedCurrency] = useState<'USDC' | 'USDT' | 'DAI'>('USDC');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -94,9 +94,15 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
       const flightIdString = `${booking.carrier}-${booking.number}-${searchParams.date}-${Date.now()}-${Math.random()}`;
       const flightIdHash = ethers.id(flightIdString);
 
-      console.log("Preparing order with UNIQUE HASH:", {
-        ticketPrice: "0.01",  // HARDCODED MINIMUM (0.01 Token)
-        premium: "0.01",      // HARDCODED MINIMUM (0.01 Token)
+      // Calculate real amounts for the contract
+      // ticketPrice = Base Fare + Platform Fee
+      // premium = Fixed at 10 as requested
+      const ticketPriceVal = baseFare + platformFee;
+      const premiumVal = 10;
+
+      console.log("Preparing order with prices:", {
+        ticketPrice: ticketPriceVal.toString(),
+        premium: premiumVal.toString(),
         flightIdHash,
         refundOnCancel: true
       });
@@ -104,8 +110,8 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
       const order = await createOrderTransaction(provider, address, {
         merchant: undefined, // use default
         token: undefined, // use default
-        ticketPrice: "0.01",  // HARDCODED MINIMUM
-        premium: "0.01",      // HARDCODED MINIMUM
+        ticketPrice: ticketPriceVal.toString(),
+        premium: premiumVal.toString(),
         flightIdHash,
         departTs: Math.floor(new Date(booking.departure.includes(' ') ? booking.departure.replace(' ', 'T') : searchParams.date + "T" + booking.departure).getTime() / 1000),
         arrivalTs: Math.floor(new Date(booking.arrival.includes(' ') ? booking.arrival.replace(' ', 'T') : searchParams.date + "T" + booking.arrival).getTime() / 1000),
@@ -145,7 +151,8 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
               insuranceEnabled: orderDetails.policyId !== "0",
               status: 'confirmed',
               policyId: orderDetails.policyId,
-              nft: policy
+              nft: policy,
+              addresses: order.addresses
             };
             break;
           }

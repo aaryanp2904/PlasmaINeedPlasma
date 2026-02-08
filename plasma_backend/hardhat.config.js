@@ -15,7 +15,7 @@ module.exports = {
   },
   networks: {
     plasmaTestnet: {
-      url: process.env.RPC_ENDPOINT,
+      url: process.env.RPC_ENDPOINT || process.env.RPC_URL,
       chainId: 9746,
       accounts: [process.env.PRIVATE_KEY], // We'll set this up next.
     },
