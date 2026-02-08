@@ -38,9 +38,10 @@ async function main() {
     console.log("FlightOutcomeOracle deployed to:", await oracle.getAddress());
 
     // 5. Wire up dependencies
-    // Pool needs to trust PolicyManager
+    // Pool needs to trust PolicyManager and Escrow
     await pool.setPolicyManager(await policyManager.getAddress());
-    console.log("Pool initialized with PolicyManager");
+    await pool.setEscrow(await escrow.getAddress());
+    console.log("Pool initialized with PolicyManager and Escrow");
 
     // PolicyManager needs to trust Escrow and Oracle
     // PolicyManager needs to trust Escrow and Oracle

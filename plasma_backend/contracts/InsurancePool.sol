@@ -3,22 +3,40 @@
 pragma solidity ^0.8.23;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {
+    ReentrancyGuard
+} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @notice Holds premiums + liquidity, pays claims (only callable by PolicyManager).
 contract InsurancePool is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address public policyManager;
+    address public escrow;
 
     event PolicyManagerSet(address indexed policyManager);
-    event PoolFunded(address indexed funder, address indexed token, uint256 amount);
-    event ClaimPaid(address indexed token, address indexed to, uint256 amount, uint256 indexed policyId);
+    event EscrowSet(address indexed escrow);
+    event PoolFunded(
+        address indexed funder,
+        address indexed token,
+        uint256 amount
+    );
+    event ClaimPaid(
+        address indexed token,
+        address indexed to,
+        uint256 amount,
+        uint256 indexed policyId
+    );
 
-    modifier onlyPolicyManager() {
-        require(msg.sender == policyManager, "POOL:NOT_POLICY_MANAGER");
+    modifier onlyAuthorized() {
+        require(
+            msg.sender == policyManager || msg.sender == escrow,
+            "POOL:UNAUTHORIZED"
+        );
         _;
     }
 
@@ -28,6 +46,12 @@ contract InsurancePool is Ownable, ReentrancyGuard {
         require(_pm != address(0), "POOL:ZERO_PM");
         policyManager = _pm;
         emit PolicyManagerSet(_pm);
+    }
+
+    function setEscrow(address _escrow) external onlyOwner {
+        require(_escrow != address(0), "POOL:ZERO_ESCROW");
+        escrow = _escrow;
+        emit EscrowSet(_escrow);
     }
 
     function fundPool(address token, uint256 amount) external nonReentrant {
@@ -41,11 +65,12 @@ contract InsurancePool is Ownable, ReentrancyGuard {
         return IERC20(token).balanceOf(address(this));
     }
 
-    function payClaim(address token, address to, uint256 amount, uint256 policyId)
-        external
-        nonReentrant
-        onlyPolicyManager
-    {
+    function payClaim(
+        address token,
+        address to,
+        uint256 amount,
+        uint256 policyId
+    ) external nonReentrant onlyAuthorized {
         if (amount == 0) return;
         IERC20(token).safeTransfer(to, amount);
         emit ClaimPaid(token, to, amount, policyId);

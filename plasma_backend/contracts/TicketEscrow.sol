@@ -22,6 +22,15 @@ interface IPolicyManagerMint {
     ) external returns (uint256 policyId);
 }
 
+interface IInsurancePool {
+    function payClaim(
+        address token,
+        address to,
+        uint256 amount,
+        uint256 policyId
+    ) external;
+}
+
 /// @notice Holds ticket funds in escrow, optionally mints insurance policy and forwards premium to pool.
 contract TicketEscrow is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -283,6 +292,37 @@ contract TicketEscrow is Ownable, ReentrancyGuard {
             o.status = ORDER_REFUNDED;
             IERC20(o.token).safeTransfer(o.buyer, o.ticketPrice);
             emit FundsRefunded(orderId, o.buyer, o.ticketPrice);
+        } else if (o.refundOnCancel && outcomeStatus == STATUS_DELAYED) {
+            // Delayed:
+            // 1. Merchant gets ticket price (from Escrow)
+            o.status = ORDER_RELEASED;
+            IERC20(o.token).safeTransfer(o.merchant, o.ticketPrice);
+            emit FundsReleased(orderId, o.merchant, o.ticketPrice);
+
+            // 2. Buyer gets Partial Refund (from Pool) via payClaim
+            // Logic: >2h delay logic handled by PolicyManager usually,
+            // but here we are bypassing PolicyManager for "RefundOnCancel" feature?
+            // The user said: "divide the payment by 10^18" earlier, which was frontend formatting.
+            // The prompt "calculate refund amount" implies we use the same formula?
+            // "if the flight outcome was on time that no payment is made back to the user, if the flight is delayed by more than 2 hours then for each hour it's a 10% extra refund capped at 70%"
+
+            uint256 refundAmount = 0;
+            if (delayMins > 120) {
+                uint256 hoursOver = (delayMins - 120) / 60;
+                uint256 percentage = (hoursOver + 1) * 10;
+                if (percentage > 70) percentage = 70;
+                refundAmount = (o.ticketPrice * percentage) / 100;
+            }
+
+            if (refundAmount > 0) {
+                IInsurancePool(insurancePool).payClaim(
+                    o.token,
+                    o.buyer,
+                    refundAmount,
+                    0
+                ); // policyId 0 for direct refund
+                emit FundsRefunded(orderId, o.buyer, refundAmount);
+            }
         } else {
             o.status = ORDER_RELEASED;
             IERC20(o.token).safeTransfer(o.merchant, o.ticketPrice);

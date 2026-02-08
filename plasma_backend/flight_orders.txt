@@ -325,3 +325,178 @@ Flight Details: {
   "to": "LHR"
 }
 ---------------------------------------------------
+
+---------------------------------------------------
+Timestamp: 2026-02-08T04:22:26.812Z
+Order ID: 2
+Transaction Hash: 0x06a59efa423217d9f0cb935ceb6948f246584ff940d8635061271a66dd718fa8
+Flight Details: {
+  "id": "B6418",
+  "carrier": "JetBlue",
+  "number": "418",
+  "departure": "2026-02-15 11:40:00",
+  "arrival": "2026-02-15 17:35:00",
+  "duration": "PT8H55M",
+  "price": 296.37,
+  "direct": false,
+  "seats": 7,
+  "carrierName": "JetBlue",
+  "carrierCode": "B6",
+  "origin": "JFK",
+  "destination": "LAX",
+  "date": "2026-02-15",
+  "passengers": 1,
+  "from": "JFK",
+  "to": "LAX"
+}
+---------------------------------------------------
+
+---------------------------------------------------
+Timestamp: 2026-02-08T04:25:18.729Z
+Order ID: 3
+Transaction Hash: 0xd105ad22620aec4b10faf6f1f3dff7f7ccedd571548dac698d6c56a38d205343
+Flight Details: {
+  "id": "F94817",
+  "carrier": "Frontier Airlines",
+  "number": "4817",
+  "departure": "2026-02-14 06:00:00",
+  "arrival": "2026-02-14 12:55:00",
+  "duration": "PT9H55M",
+  "price": 191.02,
+  "direct": false,
+  "seats": 4,
+  "carrierName": "Frontier Airlines",
+  "carrierCode": "F9",
+  "origin": "JFK",
+  "destination": "LAX",
+  "date": "2026-02-14",
+  "passengers": 1,
+  "from": "JFK",
+  "to": "LAX"
+}
+---------------------------------------------------
+
+---------------------------------------------------
+Timestamp: 2026-02-08T04:31:16.214Z
+Order ID: 5
+Transaction Hash: 0x473499ec10e38a0e246ce8235d14129f8a4ffe6c8ea25e097c5034a687f6a5c8
+Flight Details: {
+  "id": "6X681",
+  "carrier": "6X",
+  "number": "681",
+  "departure": "2026-02-14 10:35:00",
+  "arrival": "2026-02-14 13:40:00",
+  "duration": "PT11H5M",
+  "price": 482.93,
+  "direct": true,
+  "seats": 9,
+  "carrierName": "6X",
+  "carrierCode": "6X",
+  "origin": "LHR",
+  "destination": "LAX",
+  "date": "2026-02-14",
+  "passengers": 1,
+  "from": "lhr",
+  "to": "lax"
+}
+---------------------------------------------------
+
+---------------------------------------------------
+Timestamp: 2026-02-08T04:33:16.085Z
+Order ID: 6
+Transaction Hash: 0xa7a48e3c1634577cd6b5babe24455466483becdb7b888cc9e3068e590449e69f
+Flight Details: {
+  "id": "WS1",
+  "carrier": "WS",
+  "number": "1",
+  "departure": "2026-02-15 14:50:00",
+  "arrival": "2026-02-15 22:03:00",
+  "duration": "PT15H13M",
+  "price": 398.93,
+  "direct": false,
+  "seats": 7,
+  "carrierName": "WS",
+  "carrierCode": "WS",
+  "origin": "LHR",
+  "destination": "LAX",
+  "date": "2026-02-15",
+  "passengers": 1,
+  "from": "lhr",
+  "to": "lax"
+}
+---------------------------------------------------
+
+---------------------------------------------------
+Timestamp: 2026-02-08T04:35:36.379Z
+Order ID: 7
+Transaction Hash: 0xb3e76fb50d5a834a4477fdbe84ece316b03d3316105077d6151007fd4ab2f30f
+Flight Details: {
+  "id": "6X683",
+  "carrier": "6X",
+  "number": "683",
+  "departure": "2026-02-15 06:10:00",
+  "arrival": "2026-02-15 09:15:00",
+  "duration": "PT11H5M",
+  "price": 482.93,
+  "direct": true,
+  "seats": 9,
+  "carrierName": "6X",
+  "carrierCode": "6X",
+  "origin": "LHR",
+  "destination": "LAX",
+  "date": "2026-02-15",
+  "passengers": 1,
+  "from": "lhr",
+  "to": "lax"
+}
+---------------------------------------------------
+
+---------------------------------------------------
+Timestamp: 2026-02-08T04:49:59.664Z
+Order ID: 1
+Transaction Hash: 0x04064c18ed2c566310f6e3beec6c62cf97a49425390547bfb04babf3345e59cf
+Flight Details: {
+  "id": "TP210",
+  "carrier": "TAP Air Portugal",
+  "number": "210",
+  "departure": "2026-02-15 22:00:00",
+  "arrival": "2026-02-16 17:30:00",
+  "duration": "PT14H30M",
+  "price": 207.7,
+  "direct": false,
+  "seats": 9,
+  "carrierName": "TAP Air Portugal",
+  "carrierCode": "TP",
+  "origin": "JFK",
+  "destination": "LHR",
+  "date": "2026-02-15",
+  "passengers": 1,
+  "from": "JFK",
+  "to": "LHR"
+}
+---------------------------------------------------
+
+---------------------------------------------------
+Timestamp: 2026-02-08T04:52:31.718Z
+Order ID: 2
+Transaction Hash: 0xaa0d9d62299efad05acd5643fb82329d3fedb81e8d153f9bbe99ac0c02f1cdff
+Flight Details: {
+  "id": "6X278",
+  "carrier": "6X",
+  "number": "278",
+  "departure": "2026-02-14 18:20:00",
+  "arrival": "2026-02-15 11:35:00",
+  "duration": "PT9H15M",
+  "price": 279,
+  "direct": true,
+  "seats": 9,
+  "carrierName": "6X",
+  "carrierCode": "6X",
+  "origin": "LAX",
+  "destination": "LHR",
+  "date": "2026-02-14",
+  "passengers": 1,
+  "from": "lax",
+  "to": "lhr"
+}
+---------------------------------------------------

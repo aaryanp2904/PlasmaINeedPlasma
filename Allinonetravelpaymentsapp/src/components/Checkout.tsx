@@ -156,6 +156,7 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
 
             confirmation = {
               id: order.orderId,
+              flightId: booking.id, // Pass the real Flight ID (e.g. UA123)
               carrierName: booking.carrierName ?? booking.carrier,
               carrierCode: booking.carrierCode ?? null,
               carrier: booking.carrier,
@@ -165,7 +166,7 @@ export function Checkout({ booking, searchParams, onBack, onComplete }: Checkout
               departure: booking.departure,
               arrival: booking.arrival,
               duration: booking.duration,
-              price: orderDetails.ticketPrice, // formatted?
+              price: ethers.formatUnits(orderDetails.ticketPrice, 18), // Format from Wei to Ether
               passengers: searchParams.passengers,
               direct: booking.direct ?? true,
               currency: selectedCurrency,
